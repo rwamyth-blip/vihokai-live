@@ -7,7 +7,7 @@ VihokAI Main.py - FAST VERSION + COMMANDS + TRANSLATE
 """
 from fastapi import FastAPI, HTTPException, Query, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 from datetime import datetime
 import uuid, os, asyncio, json
@@ -55,6 +55,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ✅ จัดการ exception ทั่วไป: ส่ง JSON พร้อม CORS + log traceback
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    import traceback
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal error: {exc}"},
+    )
 
 # ✅ รวม Router
 app.include_router(translate_router)
@@ -373,7 +383,7 @@ async def ensure_conversation(user_id: str, conversation_id: str | None, title: 
     if USE_SUPABASE:
         # 1) มี conversation_id → ดึงจาก DB
         if conversation_id:
-            conv = await db_get_conversation(conversation_id)
+            conv = await db_get_conversation(user_id, conversation_id)
             if conv:
                 return conv
         # 2) ยังไม่มี → สร้างใหม่ใน Supabase
@@ -403,8 +413,8 @@ async def save_chat_result(user_id: str, conversation_id: str | None, question: 
 
     if USE_SUPABASE:
         # ✅ บันทึก messages ลง Supabase
-        await db_append_message(conv["id"], "user", question)
-        await db_append_message(conv["id"], "assistant", answer)
+        await db_append_message(user_id, conv["id"], "user", question)
+        await db_append_message(user_id, conv["id"], "assistant", answer)
 
         # ✅ บันทึกความทรงจำลง Supabase ด้วย
         if "ชื่ออะไร" not in question:
@@ -492,7 +502,7 @@ async def get_conversation(
     user_id: str = Query(default="anon")
 ):
     if USE_SUPABASE:
-        conv = await db_get_conversation(conversation_id)
+        conv = await db_get_conversation(user_id, conversation_id)
         if not conv:
             return {"error": "Conversation not found"}
         return conv
@@ -507,7 +517,7 @@ async def delete_conversation(
     user_id: str = Query(default="anon")
 ):
     if USE_SUPABASE:
-        await db_delete_conversation(conversation_id)
+        await db_delete_conversation(user_id, conversation_id)
         return {"status": "deleted", "conversation_id": conversation_id}
 
     # ---- fallback ----
