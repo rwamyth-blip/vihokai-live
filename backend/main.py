@@ -162,7 +162,7 @@ async def call_groq(prompt: str, locale: str, name: str = None, system_prompt: s
         messages.append({"role": "user", "content": full_prompt})
         
         response = await client.chat.completions.create(
-            model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            model=os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b"),
             messages=messages,
             max_tokens=600,
             temperature=0.6
@@ -584,7 +584,7 @@ async def chat(req: ChatRequest):
                     base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
                 )
                 judge_res = await client.chat.completions.create(
-                    model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                    model=os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b"),
                     messages=[{"role": "user", "content": judge_prompt}],
                     max_tokens=400
                 )
