@@ -37,3 +37,8 @@ Thumbs.db
 
 # ===== Logs =====
 *.log
+
+# ===== Supabase =====
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", os.getenv("JWT_SECRET"))
