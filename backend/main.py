@@ -771,21 +771,4 @@ async def get_current_user(request: Request):
 
 @app.get("/health")
 async def health():
-    missing = [name for name, key in [
-        ("GROQ", GROQ_API_KEY),
-        ("Gemini", GEMINI_API_KEY),
-        ("OpenAI", OPENAI_API_KEY),
-        ("DeepSeek", DEEPSEEK_API_KEY),
-        ("Kimi", KIMI_API_KEY),
-        ("Claude", CLAUDE_API_KEY),
-    ] if not key]
-    
-    supabase_status = "connected" if supabase else "not_configured"
-
-    return {
-        "status": "ok",
-        "environment": os.getenv("ENVIRONMENT", "development"),
-        "supabase": supabase_status,
-        "missing_api_keys": missing,
-        "powered_by": "Vihok AI",
-    }
+    return {"status": "ok", "app": "vihokai-backend"}
