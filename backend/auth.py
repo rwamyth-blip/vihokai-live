@@ -13,22 +13,26 @@ app = FastAPI(title="Google OAuth")
 # ====== Config ======
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", SUPABASE_KEY)
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
+JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_EXPIRY = int(os.getenv("JWT_EXPIRY", "604800"))
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", JWT_SECRET)
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+REDIRECT_URI = os.getenv(
+    "GOOGLE_REDIRECT_URI",
+    "https://vihokai-backend.onrender.com/api/auth/google/callback",
+)
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError(
         "Missing Supabase config. Set SUPABASE_URL and SUPABASE_KEY on Render."
     )
-
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-JWT_EXPIRY = int(os.getenv("JWT_EXPIRY", "604800"))
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
-REDIRECT_URI = os.getenv(
-    "GOOGLE_REDIRECT_URI",
-    "https://salvation-certainly-travels-rail.trycloudflare.com/api/auth/google/callback",
-)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -44,19 +48,16 @@ def create_jwt(user_id: str, email: str, name: str) -> str:
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 def verify_jwt(token: str) -> dict:
-    """ตรวจสอบ access token ที่ออกโดย Supabase Auth (HS256)"""
+    """ตรวจสอบ access token ที่ออกโดยแอปเราเอง (JWT_SECRET)"""
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
-
-    if not SUPABASE_JWT_SECRET:
-        raise HTTPException(status_code=500, detail="SUPABASE_JWT_SECRET not configured")
 
     try:
         payload = jwt.decode(
             token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": False},  # Supabase ไม่ใช้ standard aud
+            JWT_SECRET,
+            algorithms=[JWT_ALGORITHM],
+            options={"verify_aud": False},
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -162,7 +163,9 @@ async def google_callback(code: str):
     user = save_or_get_user(user_data)
     token = create_jwt(str(user["id"]), user["email"], user["name"])
     # เปลี่ยนเส้นทางไป Frontend พร้อมส่ง token
-    return RedirectResponse(f"http://localhost:3000/auth/callback?token={token}&user={json.dumps(user)}")
+    return RedirectResponse(
+        f"{FRONTEND_URL}/auth/callback?token={token}&user={json.dumps(user)}",
+    )
 
 async def get_supabase_user(token: str) -> Optional[dict]:
     """ยืนยัน token และดึง user ปัจจุบันจาก Supabase Auth (fresh data)"""
