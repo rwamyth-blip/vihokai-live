@@ -51,6 +51,7 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://[a-z0-9-]+\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -584,6 +585,7 @@ async def chat(req: ChatRequest):
                     base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
                 )
                 judge_res = await client.chat.completions.create(
+
                     model=os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b"),
                     messages=[{"role": "user", "content": judge_prompt}],
                     max_tokens=400
