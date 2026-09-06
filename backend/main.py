@@ -76,7 +76,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 KIMI_API_KEY = os.getenv("KIMI_API_KEY")
-CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
+CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
 
 print(f"🔑 GROQ: {'✅' if GROQ_API_KEY else '❌'}")
 print(f"🔑 Gemini: {'✅' if GEMINI_API_KEY else '❌'}")
@@ -162,7 +162,7 @@ async def call_groq(prompt: str, locale: str, name: str = None, system_prompt: s
         messages.append({"role": "user", "content": full_prompt})
         
         response = await client.chat.completions.create(
-            model="qwen/qwen-2.5-72b-instruct",
+            model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
             messages=messages,
             max_tokens=600,
             temperature=0.6
@@ -178,7 +178,7 @@ async def call_gemini(prompt: str, locale: str, name: str = None, system_prompt:
             return None
         import google.generativeai as genai
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-3.6-flash")
         mem_text = f"ผู้ใช้ชื่อ {name}. " if name else ""
         
         language_name = get_language_name(locale)
@@ -196,7 +196,7 @@ async def call_gemini(prompt: str, locale: str, name: str = None, system_prompt:
         try:
             import google.generativeai as genai
             genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel("gemini-2.5-pro")
+            model = genai.GenerativeModel("gemini-3.1-pro-preview")
             mem_text = f"ผู้ใช้ชื่อ {name}. " if name else ""
             full_prompt = f"""{mem_text}
 {system_prompt if system_prompt else ''}
@@ -275,10 +275,10 @@ async def call_kimi(prompt: str, locale: str, name: str = None, system_prompt: s
         messages.append({"role": "user", "content": f"{mem_text}{prompt} (ตอบเป็นภาษา {get_language_name(locale)} เท่านั้น กระชับ) "})
         
         response = await client.chat.completions.create(
-            model="kimi-k2-0711-preview",
+            model=os.getenv("KIMI_MODEL", "kimi-k3"),
             messages=messages,
             max_tokens=600,
-            temperature=0.6
+            temperature=1
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -584,7 +584,7 @@ async def chat(req: ChatRequest):
                     base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
                 )
                 judge_res = await client.chat.completions.create(
-                    model="qwen/qwen-2.5-72b-instruct",
+                    model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
                     messages=[{"role": "user", "content": judge_prompt}],
                     max_tokens=400
                 )
