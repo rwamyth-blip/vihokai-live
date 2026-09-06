@@ -1,0 +1,52 @@
+version: '3.8'
+services:
+  godaddy-ddns:
+    image: peteward44/godaddy-ddns:latest
+    container_name: godaddy-ddns
+    restart: unless-stopped
+    env_file:
+      - godaddy.env
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    networks:
+      - vihokai-net
+    expose:
+      - "8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - vihokai-net
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - vihokai-net
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  vihokai-net:
+    driver: bridge
