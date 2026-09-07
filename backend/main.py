@@ -36,6 +36,10 @@ from translate import translate_text_async
 from api.auth.google.callback import router as google_callback_router
 from auth import verify_jwt
 
+# ✅ Import Global Library Gateway (Library Search + RAG)
+from gateway.api import library as gateway_library
+from gateway.api import chat as gateway_chat
+
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 app = FastAPI(title="Vihok AI v4 - Fast Version + Commands + Translate", version="5.0")
@@ -70,6 +74,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ✅ รวม Router
 app.include_router(translate_router)
 app.include_router(google_callback_router)
+
+# ✅ Global Library Gateway routers (Library Search + RAG Chat)
+app.include_router(gateway_library.router)
+app.include_router(gateway_chat.router)
 
 # ===== ตรวจสอบ API Keys =====
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -252,7 +260,7 @@ async def call_deepseek(prompt: str, locale: str, name: str = None, system_promp
         messages.append({"role": "user", "content": f"{mem_text}{prompt} (ตอบเป็นภาษา {get_language_name(locale)} เท่านั้น กระชับ) "})
         
         response = await client.chat.completions.create(
-            model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+            model="deepseek-chat",
             messages=messages,
             max_tokens=600,
             temperature=0.6
