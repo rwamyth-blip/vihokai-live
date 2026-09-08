@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid, os, asyncio, json
 from urllib.parse import urlencode
 from dotenv import load_dotenv
@@ -409,7 +409,7 @@ async def ensure_conversation(user_id: str, conversation_id: str | None, title: 
     conv = {
         "id": conversation_id or str(uuid.uuid4()),
         "title": title[:40] + ("..." if len(title) > 40 else ""),
-        "created_at": datetime.now().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "messages": [],
     }
     convs.insert(0, conv)
@@ -431,10 +431,10 @@ async def save_chat_result(user_id: str, conversation_id: str | None, question: 
         return conv["id"]
 
     # ---- fallback: in-memory ----
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     conv["messages"].extend([
         {"role": "user", "content": question, "timestamp": now},
-        {"role": "assistant", "content": answer, "timestamp": datetime.now().isoformat()},
+        {"role": "assistant", "content": answer, "timestamp": datetime.now(timezone.utc).isoformat()},
     ])
 
     if "ชื่ออะไร" not in question:
@@ -460,7 +460,7 @@ async def new_chat(req: NewChatRequest):
     new_conv = {
         "id": conv_id,
         "title": req.title,
-        "created_at": datetime.now().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "messages": []
     }
     
@@ -593,7 +593,6 @@ async def chat(req: ChatRequest):
                     base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
                 )
                 judge_res = await client.chat.completions.create(
-
                     model=os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b"),
                     messages=[{"role": "user", "content": judge_prompt}],
                     max_tokens=400
@@ -689,7 +688,7 @@ async def save_memory(
 
     # ---- fallback: in-memory ----
     memories = memories_db.setdefault(user_id, [])
-    memories.append({"question": q, "answer": a, "saved_at": datetime.now().isoformat()})
+    memories.append({"question": q, "answer": a, "saved_at": datetime.now(timezone.utc).isoformat()})
     memories_db[user_id] = memories[-10:]
     return {"status": "saved", "user_id": uid, "question": q, "answer": a, "count": len(memories_db[uid]), "powered_by": "Vihok AI"}
 

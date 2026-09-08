@@ -6,7 +6,7 @@ from gateway.embeddings.model import get_embedding_model
 from gateway.vector_db.search import upsert_docs
 from gateway.database.models import IngestionJob
 from gateway.database.database import SessionLocal
-from datetime import datetime
+from datetime import datetime, timezone
 
 @celery_app.task(name="ingest_library")
 def ingest_task(query: str, limit: int = 10):
@@ -31,11 +31,11 @@ def ingest_task(query: str, limit: int = 10):
         if vectors:
             upsert_docs(docs, vectors)
         
-        db.query(IngestionJob).filter(IngestionJob.id==job_id).update({"status":"done","docs_ingested": len(docs), "finished_at": datetime.utcnow()})
+        db.query(IngestionJob).filter(IngestionJob.id==job_id).update({"status":"done","docs_ingested": len(docs), "finished_at": datetime.now(timezone.utc)})
         db.commit()
         return {"ingested": len(docs), "job_id": job_id}
     except Exception as e:
-        db.query(IngestionJob).filter(IngestionJob.id==job_id).update({"status":"failed","finished_at": datetime.utcnow()})
+        db.query(IngestionJob).filter(IngestionJob.id==job_id).update({"status":"failed","finished_at": datetime.now(timezone.utc)})
         db.commit()
         raise e
     finally:
