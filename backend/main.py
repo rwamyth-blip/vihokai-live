@@ -259,11 +259,18 @@ async def call_openai(prompt: str, locale: str, name: str = None, system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": f"{mem_text}{prompt} (ตอบเป็นภาษา {get_language_name(locale)} เท่านั้น กระชับ) "})
         
+        model = os.getenv("OPENAI_MODEL", "gpt-5-nano")
+        # GPT-5 family = reasoning models: reject temperature/max_tokens and need
+        # max_completion_tokens (reasoning tokens are billed against it).
+        if model.startswith("gpt-5") or model.startswith("o1") or model.startswith("o3") or model.startswith("o4"):
+            kwargs = {"max_completion_tokens": 2000, "reasoning_effort": "minimal"}
+        else:
+            kwargs = {"max_tokens": 600, "temperature": 0.6}
+        
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model,
             messages=messages,
-            max_tokens=600,
-            temperature=0.6
+            **kwargs
         )
         return response.choices[0].message.content
     except Exception as e:
