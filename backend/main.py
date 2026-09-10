@@ -290,8 +290,9 @@ async def call_deepseek(prompt: str, locale: str, name: str = None, system_promp
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": f"{mem_text}{prompt} (ตอบเป็นภาษา {get_language_name(locale)} เท่านั้น กระชับ) "})
         
+        model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
         response = await client.chat.completions.create(
-            model="deepseek-chat",
+            model=model,
             messages=messages,
             max_tokens=600,
             temperature=0.6
